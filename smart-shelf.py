@@ -1,0 +1,55 @@
+import asyncio
+import logging
+import os
+import signal
+from uuid import uuid4
+
+import aiopubsub
+from dotenv import load_dotenv
+
+from devices.aws import AwsDevice
+from devices.display import Display
+from devices.rfid_reader import RfidReader
+
+load_dotenv()
+
+try:
+    aws_endpoint = os.environ["AWS_ENDPOINT"]
+    aws_root_ca = os.environ["AWS_ROOT_CA"]
+    aws_cert = os.environ["AWS_CERT"]
+    aws_key = os.environ["AWS_KEY"]
+    client_id = os.getenv("CLIENT_ID", f"test-{str(uuid4())}")
+except Exception as e:
+    print("Unable to get the env variable:", e)
+    exit(1)
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.DEBUG)
+
+    loop = asyncio.get_event_loop()
+    message_bus = aiopubsub.Hub()
+
+    display = Display(loop=loop, message_bus=message_bus)
+    rfid_reader = RfidReader(loop=loop, message_bus=message_bus)
+    aws_device = AwsDevice(
+        endpoint=aws_endpoint,
+        root_ca=aws_root_ca,
+        cert=aws_cert,
+        key=aws_key,
+        client_id=client_id,
+        message_bus=message_bus
+    )
+
+    async def on_quit():
+        await aws_device.stop()
+        loop.stop()
+
+    loop.add_signal_handler(signal.SIGINT, lambda: asyncio.create_task(on_quit()))
+
+    task1 = asyncio.Task(display.start_display())
+    task2 = asyncio.Task(rfid_reader.start_reading())
+    task3 = asyncio.Task(aws_device.start())
+
+    logging.info("Staring...")
+    loop.run_forever()
