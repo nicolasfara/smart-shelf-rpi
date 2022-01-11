@@ -65,11 +65,11 @@ class AwsDevice:
             "product": message
         }
         logging.debug("Publish %s", payload)
-        await asyncio.wrap_future(self._mqtt_connection.publish(
+        self._mqtt_connection.publish(
             topic="test/topic",
             payload=json.dumps(payload),
             qos=mqtt.QoS.AT_LEAST_ONCE
-        ))
+        )
 
     def __on_connection_interrupted(self, connection, error, **kwargs) -> None:
         logging.error("Connection interrupted. error: %s", error)
