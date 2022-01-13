@@ -14,7 +14,7 @@ class Display:
 
     def __init__(self, loop: asyncio.AbstractEventLoop, message_bus: aiopubsub.Hub) -> None:
         self._i2c = board.I2C()
-        self._oled = adafruit_ssd1306.SSD1306_I2C(128, 32, self._i2c, addr=0x3c)
+        self._oled = adafruit_ssd1306.SSD1306_I2C(128, 64, self._i2c, addr=0x3c)
 
         self._image = Image.new("1", (self._oled.width, self._oled.height))
         self._draw = ImageDraw.Draw(self._image)
