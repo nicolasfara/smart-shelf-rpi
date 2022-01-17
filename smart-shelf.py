@@ -1,3 +1,5 @@
+import argparse
+from ast import arg
 import asyncio
 import logging
 import os
@@ -12,6 +14,10 @@ from devices.display import Display
 from devices.rfid_reader import RfidReader
 
 load_dotenv()
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--dryrun", help="Disabele connection with AWS, no messages are sent", action="store_true")
+args = parser.parse_args()
 
 try:
     aws_endpoint = os.environ["AWS_ENDPOINT"]
@@ -32,24 +38,27 @@ if __name__ == "__main__":
 
     display = Display(loop=loop, message_bus=message_bus)
     rfid_reader = RfidReader(loop=loop, message_bus=message_bus)
-    aws_device = AwsDevice(
-        endpoint=aws_endpoint,
-        root_ca=aws_root_ca,
-        cert=aws_cert,
-        key=aws_key,
-        client_id=client_id,
-        message_bus=message_bus
-    )
+    if not args.dryrun:
+        aws_device = AwsDevice(
+            endpoint=aws_endpoint,
+            root_ca=aws_root_ca,
+            cert=aws_cert,
+            key=aws_key,
+            client_id=client_id,
+            message_bus=message_bus
+        )
 
     async def on_quit():
-        await aws_device.stop()
+        if not args.dryrun:
+            await aws_device.stop()
         loop.stop()
 
     loop.add_signal_handler(signal.SIGINT, lambda: asyncio.create_task(on_quit()))
 
     task1 = asyncio.Task(display.start_display())
     task2 = asyncio.Task(rfid_reader.start_reading())
-    task3 = asyncio.Task(aws_device.start())
+    if not args.dryrun:
+        task3 = asyncio.Task(aws_device.start())
 
     logging.info("Staring...")
     loop.run_forever()

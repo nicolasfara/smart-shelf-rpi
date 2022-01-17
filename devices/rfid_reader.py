@@ -11,6 +11,8 @@ import board
 from adafruit_pn532.adafruit_pn532 import MIFARE_CMD_AUTH_B
 from adafruit_pn532.i2c import PN532_I2C
 
+from models.product import Product, create_product
+
 
 class RfidReader:
 
@@ -43,16 +45,17 @@ class RfidReader:
             if uid is not None:
                 logging.debug("New card found: %s", [hex(x) for x in uid])
 
-                read = await self.read_sector(uid, 1)
+                read = await self.__read_sector(uid, 1)
                 if read is not None:
                     logging.debug("Byte read: %s", [hex(x) for x in read])
                     logging.info("message read: %s", read.decode())
-                    self._publisher.publish(self._publish_key, read.decode().split('\x00', 1)[0])
+                    product = create_product(id="12345", name=read.decode().split('\x00', 1)[0], price=2.45, expiration_day="12/02/2022")
+                    self._publisher.publish(self._publish_key, product)
 
                     await asyncio.sleep(0.5)
 
 
-    async def read_block(self, uid, block: int) -> Union[bytearray, None]:
+    async def __read_block(self, uid, block: int) -> Union[bytearray, None]:
         """
         Read the given block from the tag with the given UID.
         """
@@ -62,7 +65,7 @@ class RfidReader:
 
         return await self._loop.run_in_executor(None, self._pn532.mifare_classic_read_block, block)
 
-    async def read_sector(self, uid, sector: int) -> Union[bytearray, None]:
+    async def __read_sector(self, uid, sector: int) -> Union[bytearray, None]:
         """
         Read the given sector from the tag with the given UID.
         This method read only data block, the authentication block is ignored.
@@ -70,7 +73,7 @@ class RfidReader:
         start_block = sector * 4
         res = bytearray(0)
         for blk in range(0, 3):
-            block = await self.read_block(uid, start_block + blk)
+            block = await self.__read_block(uid, start_block + blk)
             if block is None:
                 logging.error("Fail to read block %d", start_block + blk)
                 return None

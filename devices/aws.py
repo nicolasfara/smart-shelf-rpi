@@ -10,6 +10,8 @@ import aiopubsub
 from awscrt import auth, http, io, mqtt
 from awsiot import iotshadow, mqtt_connection_builder
 
+from models.product import Product
+
 
 class AwsDevice:
     def __init__(
@@ -60,14 +62,11 @@ class AwsDevice:
 
     # Private methods
 
-    async def __on_new_tag(self, key, message) -> None:
-        payload = {
-            "product": message
-        }
-        logging.debug("Publish %s", payload)
+    async def __on_new_tag(self, key, product: Product) -> None:
+        logging.debug("Publish %s", product)
         self._mqtt_connection.publish(
             topic="test/topic",
-            payload=json.dumps(payload),
+            payload=json.dumps(product),
             qos=mqtt.QoS.AT_LEAST_ONCE
         )
 
