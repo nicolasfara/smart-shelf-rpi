@@ -55,7 +55,7 @@ class Display:
 
     async def __on_new_tag(self, key, product: Product) -> None:
         logging.debug("New message with key: %s", key)
-        await self.__configure_product_view(product.name, product.price, product.expiration_day.strftime("%d/%m/%y"), product.id)
+        await self.__configure_product_view(product.name, product.price, product.expiration_day.strftime("%d/%m/%y"), product.product_id)
 
     async def __splash_screen(self) -> None:
         await self.__setup_productview_frame()
