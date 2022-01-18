@@ -1,9 +1,12 @@
+"""
+TODO.
+"""
 import argparse
-from ast import arg
 import asyncio
 import logging
 import os
 import signal
+import sys
 from uuid import uuid4
 
 import aiopubsub
@@ -25,9 +28,9 @@ try:
     aws_cert = os.environ["AWS_CERT"]
     aws_key = os.environ["AWS_KEY"]
     client_id = os.getenv("CLIENT_ID", f"test-{str(uuid4())}")
-except Exception as e:
+except KeyError as e:
     print("Unable to get the env variable:", e)
-    exit(1)
+    sys.exit(1)
 
 
 if __name__ == "__main__":
@@ -48,12 +51,12 @@ if __name__ == "__main__":
             message_bus=message_bus
         )
 
-    async def on_quit():
+    async def __on_quit():
         if not args.dryrun:
             await aws_device.stop()
         loop.stop()
 
-    loop.add_signal_handler(signal.SIGINT, lambda: asyncio.create_task(on_quit()))
+    loop.add_signal_handler(signal.SIGINT, lambda: asyncio.create_task(__on_quit()))
 
     task1 = asyncio.Task(display.start_display())
     task2 = asyncio.Task(rfid_reader.start_reading())
