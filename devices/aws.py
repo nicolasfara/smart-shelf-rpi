@@ -2,7 +2,6 @@
 Class managing AWS connection.
 """
 import asyncio
-import json
 import logging
 import sys
 
