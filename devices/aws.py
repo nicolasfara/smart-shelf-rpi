@@ -74,7 +74,7 @@ class AwsDevice:
         self.__logger.debug("Got new message with key %s: %s", key, product)
         self.__mqtt_connection.publish(
             topic="test/topic",
-            payload=json.dumps(product),
+            payload=product.to_json(),
             qos=mqtt.QoS.AT_LEAST_ONCE
         )
 

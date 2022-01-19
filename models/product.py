@@ -1,6 +1,7 @@
 """
 TODO.
 """
+import pickle
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -13,6 +14,12 @@ class Product:
     name: str
     price: float
     expiration_day: datetime
+
+    def to_json(self):
+        """
+        TODO
+        """
+        return pickle.dumps(self)
 
 def create_product(product_id: str, name: str, price: str, expiration_day: str) -> Product:
     """
