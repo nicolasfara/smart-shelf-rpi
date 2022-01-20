@@ -1,4 +1,4 @@
-Adafruit_Blinka==6.20.0
+Adafruit_Blinka==6.20.1
 adafruit_circuitpython_pn532==2.3.5
 adafruit_circuitpython_ssd1306==2.12.3
 adafruit_pn532==1.2.1
