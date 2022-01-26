@@ -1,29 +1,21 @@
 """
 TODO.
 """
-import pickle
-from dataclasses import dataclass
-from datetime import datetime
+from marshmallow import Schema, fields
 
-@dataclass
 class Product:
+    """TODO"""
+    def __init__(self, product_id: str, name: str, price: float, expiration_date: str):
+        self.product_id = product_id
+        self.name = name
+        self.price = price
+        self.expiration_date = expiration_date
+
+class ProductSchema(Schema):
     """
     Class representing a Product's tag.
     """
-    product_id: str
-    name: str
-    price: float
-    expiration_day: datetime
-
-    def to_json(self):
-        """
-        TODO
-        """
-        return pickle.dumps(self)
-
-def create_product(product_id: str, name: str, price: str, expiration_day: str) -> Product:
-    """
-    Create a new Product object from parameters.
-    """
-    exp_date = datetime.strptime(expiration_day, "%d/%m/%Y")
-    return Product(product_id=product_id, name=name, price=price, expiration_day=exp_date)
+    product_id = fields.Str()
+    name = fields.Str()
+    price = fields.Float()
+    expiration_date = fields.Str()
