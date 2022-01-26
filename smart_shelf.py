@@ -15,6 +15,7 @@ from dotenv import load_dotenv
 from devices.aws import AwsDevice
 from devices.display import Display
 from devices.rfid_reader import RfidReader
+from devices.product_manager import ProductManager
 
 load_dotenv()
 
@@ -28,6 +29,8 @@ try:
     aws_cert = os.environ["AWS_CERT"]
     aws_key = os.environ["AWS_KEY"]
     client_id = os.getenv("CLIENT_ID", f"test-{str(uuid4())}")
+    os.environ["AWS_BACKEND_KEY"]
+    os.environ["AWS_BACKEND_SECRET"]
 except KeyError as e:
     print("Unable to get the env variable:", e)
     sys.exit(1)
@@ -41,6 +44,7 @@ if __name__ == "__main__":
 
     display = Display(loop=loop, message_bus=message_bus)
     rfid_reader = RfidReader(loop=loop, message_bus=message_bus)
+    product_manager = ProductManager(loop=loop, message_bus=message_bus)
     if not args.dryrun:
         aws_device = AwsDevice(
             endpoint=aws_endpoint,
@@ -60,8 +64,9 @@ if __name__ == "__main__":
 
     task1 = asyncio.Task(display.start_display())
     task2 = asyncio.Task(rfid_reader.start_reading())
+    task3 = asyncio.Task(product_manager.start())
     if not args.dryrun:
-        task3 = asyncio.Task(aws_device.start())
+        task4 = asyncio.Task(aws_device.start())
 
     logging.info("Staring...")
     loop.run_forever()
