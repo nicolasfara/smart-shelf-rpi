@@ -75,8 +75,13 @@ class ProductManager:
         self.__logger.debug("Product list: %s", self.__products.products)
 
     async def __on_product_update(self, key, product: Product):
-        self.__logger.debug("Receive product update: %s", product)
-        product_in_shelf = list(filter(lambda p: p.code == product.code and p.lot == product.lot, self.__products.products))
+        self.__logger.debug("Receive product update: %s from key %s", product, key)
+        product_in_shelf = list(
+            filter(
+                lambda p: p.code == product.code and p.lot == product.lot,
+                self.__products.products
+            )
+        )
         if not product_in_shelf:
             self.__logger.debug("The product is not in the shelf, skip operation")
         else:

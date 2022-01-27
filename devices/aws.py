@@ -12,12 +12,13 @@ from models.product import ProductSchema
 
 from models.product import Product
 
-insert_product_topic = "products/insert"
-remove_product_topic = "products/remove"
-update_product_topic = "products/update"
+INSERT_PRODUCT_TOPIC = "products/insert"
+REMOVE_PRODUCT_TOPIC = "products/remove"
+UPDATE_PRODUCT_TOPIC = "products/update"
 
 
 class AwsDevice:
+    #pylint: disable=too-many-instance-attributes
     """
     Aws device.
     """
@@ -67,7 +68,7 @@ class AwsDevice:
 
         await asyncio.wrap_future(
             self.__mqtt_connection.subscribe(
-                topic=update_product_topic,
+                topic=UPDATE_PRODUCT_TOPIC,
                 qos=mqtt.QoS.AT_LEAST_ONCE,
                 callback=self.__on_product_update
             )
@@ -85,6 +86,7 @@ class AwsDevice:
     # Private methods
 
     def __on_product_update(self, topic, payload, dup, qos, retain, **kwargs):
+        #pylint: disable=unused-argument
         self.__logger.debug("New product update: %s", payload)
         product_updated = ProductSchema().loads(payload)
         self.__logger.debug("De-seriaslized object: %s", product_updated)
