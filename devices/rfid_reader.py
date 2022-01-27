@@ -52,9 +52,10 @@ class RfidReader:
                     self.__logger.debug("Byte read: %s", [hex(x) for x in read])
                     self.__logger.info("message read: %s", read.decode())
                     product = Product(
-                        product_id="12345",
+                        code="12345",
+                        lot=1647384,
                         name=read.decode().split('\x00', 1)[0],
-                        price=2.45, expiration_date="2022-02-26"
+                        price=2.45, expirationDate="2022-02-26", promoPrice=None, inPromo=None
                     )
                     self._publisher.publish(self._publish_key, product)
 
