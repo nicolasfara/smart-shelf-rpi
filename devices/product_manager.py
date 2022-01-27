@@ -14,7 +14,7 @@ from boto3.dynamodb.conditions import Attr
 from botocore.exceptions import ClientError
 from marshmallow import Schema, fields, post_load
 from marshmallow.exceptions import ValidationError
-from models.product import Product, ProductSchema
+from models.product import Product, ProductSchema, ProductTag
 
 
 class ProductShelf:
@@ -56,6 +56,8 @@ class ProductManager:
 
         self.__subscriber = aiopubsub.Subscriber(self.__message_bus, "ProductManager")
         self.__subscribe_key = aiopubsub.Key("*", "tag", "*")
+        self.__publisher = aiopubsub.Publisher(self.__message_bus, prefix = aiopubsub.Key("productmanager"))
+        self.__publish_key = aiopubsub.Key("productmanager", "product")
 
         self.__logger = logging.getLogger("product_manager")
 
@@ -64,16 +66,16 @@ class ProductManager:
         await self.__load_products_file()
         self.__subscriber.add_async_listener(self.__subscribe_key, self.__on_new_tag)
 
-    async def __on_new_tag(self, key, product: Product):
+    async def __on_new_tag(self, key, product: ProductTag):
         self.__logger.info("Get new product %s from %s", product, key)
         await self.__insert_remove_product_logic(product)
         self.__logger.debug("Product list: %s", self.__products.products)
 
-    async def __insert_remove_product_logic(self, product: Product) -> None:
+    async def __insert_remove_product_logic(self, product: ProductTag) -> None:
         def callback():
             try:
                 products_result = self.__table.scan(
-                    FilterExpression=Attr("code").eq("ABC12345") & Attr("lot").eq(250122)
+                    FilterExpression=Attr("code").eq(product.code) & Attr("lot").eq(product.lot)
                 )
                 return products_result.get("Items", [])
             except ClientError as error:
@@ -104,6 +106,13 @@ class ProductManager:
                 self.__products.products.pop(index)
 
             await self.__write_products_file(ProductShelfSchema().dumps(self.__products))
+            if len(self.__products.products) > 0:
+                product_display = self.__products.products[0]
+            else:
+                product_display = None
+
+            # Send to display the product if any, otherwise None
+            self.__publisher.publish(self.__publish_key, product_display)
 
     async def __load_products_file(self) -> None:
         async with aiofile.async_open(self.__save_path, 'r') as file:
