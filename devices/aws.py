@@ -8,8 +8,13 @@ import sys
 import aiopubsub
 from awscrt import io, mqtt
 from awsiot import mqtt_connection_builder
+from models.product import ProductSchema
 
 from models.product import Product
+
+insert_product_topic = "products/insert"
+remove_product_topic = "products/remove"
+update_product_topic = "products/update"
 
 
 class AwsDevice:
@@ -30,6 +35,8 @@ class AwsDevice:
         self.__message_bus = message_bus
         self.__subscriber = aiopubsub.Subscriber(self.__message_bus, "aws")
         self.__subscribe_key = aiopubsub.Key("*", "tag", "*")
+        self.__publisher = aiopubsub.Publisher(self.__message_bus, prefix = aiopubsub.Key("aws"))
+        self.__publish_key = aiopubsub.Key("update", "product")
 
         self.__logger = logging.getLogger("aws")
 
@@ -58,6 +65,14 @@ class AwsDevice:
         await asyncio.wrap_future(self.__mqtt_connection.connect())
         self.__logger.debug("Connected to %s", self.__endpoint)
 
+        await asyncio.wrap_future(
+            self.__mqtt_connection.subscribe(
+                topic=update_product_topic,
+                qos=mqtt.QoS.AT_LEAST_ONCE,
+                callback=self.__on_product_update
+            )
+        )
+
         self.__subscriber.add_async_listener(self.__subscribe_key, self.__on_new_tag)
 
     async def stop(self):
@@ -68,6 +83,12 @@ class AwsDevice:
         self.__logger.info("Disconnect from %s", self.__endpoint)
 
     # Private methods
+
+    def __on_product_update(self, topic, payload, dup, qos, retain, **kwargs):
+        self.__logger.debug("New product update: %s", payload)
+        product_updated = ProductSchema().loads(payload)
+        self.__logger.debug("De-seriaslized object: %s", product_updated)
+        self.__publisher.publish(self.__publish_key, product_updated)
 
     async def __on_new_tag(self, key, product: Product) -> None:
         self.__logger.debug("Got new message with key %s: %s", key, product)

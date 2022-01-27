@@ -55,7 +55,8 @@ class ProductManager:
         self.__table = self.__db.Table("Product-n5ua2pmmmrcibp6oynfn73yccq-sc")
 
         self.__subscriber = aiopubsub.Subscriber(self.__message_bus, "ProductManager")
-        self.__subscribe_key = aiopubsub.Key("*", "tag", "*")
+        self.__subscribe_new_tag_key = aiopubsub.Key("*", "tag", "*")
+        self.__subscribe_update_key = aiopubsub.Key("*", "update", "*")
         self.__publisher = aiopubsub.Publisher(self.__message_bus, prefix = aiopubsub.Key("productmanager"))
         self.__publish_key = aiopubsub.Key("productmanager", "product")
 
@@ -64,12 +65,28 @@ class ProductManager:
     async def start(self) -> None:
         """TODO"""
         await self.__load_products_file()
-        self.__subscriber.add_async_listener(self.__subscribe_key, self.__on_new_tag)
+        self.__subscriber.add_async_listener(self.__subscribe_new_tag_key, self.__on_new_tag)
+        self.__subscriber.add_async_listener(self.__subscribe_update_key, self.__on_product_update)
+        await self.__send_product_to_display()
 
     async def __on_new_tag(self, key, product: ProductTag):
         self.__logger.info("Get new product %s from %s", product, key)
         await self.__insert_remove_product_logic(product)
         self.__logger.debug("Product list: %s", self.__products.products)
+
+    async def __on_product_update(self, key, product: Product):
+        self.__logger.debug("Receive product update: %s", product)
+        product_in_shelf = list(filter(lambda p: p.code == product.code and p.lot == product.lot, self.__products.products))
+        if not product_in_shelf:
+            self.__logger.debug("The product is not in the shelf, skip operation")
+        else:
+            self.__logger.debug("Product found in the shelf! Updating info")
+            index = self.__products.products.index(product_in_shelf[0])
+            self.__products.products.pop(index) # remove the old product info
+            self.__products.products.insert(index, product) # update info
+            await self.__write_products_file(ProductShelfSchema().dumps(self.__products))
+            if index == 0:
+                await self.__send_product_to_display()
 
     async def __insert_remove_product_logic(self, product: ProductTag) -> None:
         def callback():
@@ -106,13 +123,7 @@ class ProductManager:
                 self.__products.products.pop(index)
 
             await self.__write_products_file(ProductShelfSchema().dumps(self.__products))
-            if len(self.__products.products) > 0:
-                product_display = self.__products.products[0]
-            else:
-                product_display = None
-
-            # Send to display the product if any, otherwise None
-            self.__publisher.publish(self.__publish_key, product_display)
+            await self.__send_product_to_display()
 
     async def __load_products_file(self) -> None:
         async with aiofile.async_open(self.__save_path, 'r') as file:
@@ -128,3 +139,11 @@ class ProductManager:
     async def __write_products_file(self, payload) -> None:
         async with aiofile.async_open(self.__save_path, 'w') as file:
             await file.write(payload)
+
+    async def __send_product_to_display(self):
+        if len(self.__products.products) > 0:
+            product_display = self.__products.products[0]
+        else:
+            product_display = None
+
+        self.__publisher.publish(self.__publish_key, product_display)
