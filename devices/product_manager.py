@@ -2,22 +2,23 @@
 Manage products in the shelf: insert and remove.
 """
 import asyncio
-import boto3
-import os
 import logging
-from boto3.dynamodb.conditions import Attr
-from botocore.exceptions import ClientError
+import os
 from pathlib import Path
 from typing import List
 
 import aiofile
 import aiopubsub
+import boto3
+from boto3.dynamodb.conditions import Attr
+from botocore.exceptions import ClientError
 from marshmallow import Schema, fields, post_load
 from marshmallow.exceptions import ValidationError
 from models.product import Product, ProductSchema
 
 
 class ProductShelf:
+    #pylint: disable=too-few-public-methods
     """TODO"""
     def __init__(self, products: List[Product]):
         self.products = products
@@ -28,10 +29,12 @@ class ProductShelfSchema(Schema):
 
     @post_load
     def make_user(self, data, **kwargs):
+        #pylint: disable=missing-function-docstring,unused-argument,no-self-use
         return ProductShelf(**data)
 
 
 class ProductManager:
+    #pylint: disable=too-many-instance-attributes
     """
     TODO.
     """
@@ -72,10 +75,10 @@ class ProductManager:
                 products_result = self.__table.scan(
                     FilterExpression=Attr("code").eq("ABC12345") & Attr("lot").eq(250122)
                 )
+                return products_result.get("Items", [])
             except ClientError as error:
                 self.__logger.error(error)
-            else:
-                return products_result.get("Items", [])
+                return []
 
         result = await self.__loop.run_in_executor(None, callback)
 
