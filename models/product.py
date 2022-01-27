@@ -26,9 +26,7 @@ class Product:
         self.promoPrice = promoPrice #pylint: disable=invalid-name
 
 class ProductSchema(Schema):
-    """
-    Class representing a Product's tag.
-    """
+    #pylint: disable=missing-class-docstring
     class Meta:
         #pylint: disable=missing-class-docstring,too-few-public-methods
         unknown = EXCLUDE
@@ -45,3 +43,21 @@ class ProductSchema(Schema):
     def make_user(self, data, **kwargs):
         #pylint: disable=missing-function-docstring,unused-argument,no-self-use
         return Product(**data)
+
+class ProductTag:
+    #pylint: disable=too-few-public-methods
+    """Model the tag info of a product"""
+
+    def __init__(self, code: str, lot: int):
+        self.code = code
+        self.lot = lot
+
+class ProductTagSchema(Schema):
+    #pylint: disable=missing-class-docstring
+    code = fields.Str()
+    lot = fields.Int()
+
+    @post_load
+    def make_user(self, data, **kwargs):
+        #pylint: disable=missing-function-docstring,unused-argument,no-self-use
+        return ProductTag(**data)
