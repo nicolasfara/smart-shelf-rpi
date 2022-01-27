@@ -1,21 +1,34 @@
 """
 TODO.
 """
-from marshmallow import Schema, fields
+from marshmallow import Schema, fields, post_load, EXCLUDE
 
 class Product:
     """TODO"""
-    def __init__(self, product_id: str, name: str, price: float, expiration_date: str):
-        self.product_id = product_id
+    def __init__(self, code: str, lot: int, name: str, price: float, expirationDate: str, inPromo: bool, promoPrice: float):
+        self.code = code
+        self.lot = lot
         self.name = name
         self.price = price
-        self.expiration_date = expiration_date
+        self.expirationDate = expirationDate
+        self.inPromo = inPromo
+        self.promoPrice = promoPrice
 
 class ProductSchema(Schema):
     """
     Class representing a Product's tag.
     """
-    product_id = fields.Str()
+    class Meta:
+        unknown = EXCLUDE
+
+    code = fields.Str()
+    lot = fields.Int()
     name = fields.Str()
     price = fields.Float()
-    expiration_date = fields.Str()
+    expirationDate = fields.Str()
+    inPromo = fields.Boolean(required=False, missing=False)
+    promoPrice = fields.Float(required=False, missing=None)
+
+    @post_load
+    def make_user(self, data, **kwargs):
+        return Product(**data)
