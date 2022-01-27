@@ -4,21 +4,33 @@ TODO.
 from marshmallow import Schema, fields, post_load, EXCLUDE
 
 class Product:
+    #pylint: disable=too-few-public-methods
     """TODO"""
-    def __init__(self, code: str, lot: int, name: str, price: float, expirationDate: str, inPromo: bool, promoPrice: float):
+    def __init__(
+        #pylint: disable=too-many-arguments
+        self,
+        code: str,
+        lot: int,
+        name: str,
+        price: float,
+        expirationDate: str, #pylint: disable=invalid-name
+        inPromo: bool, #pylint: disable=invalid-name
+        promoPrice: float #pylint: disable=invalid-name
+    ):
         self.code = code
         self.lot = lot
         self.name = name
         self.price = price
-        self.expirationDate = expirationDate
-        self.inPromo = inPromo
-        self.promoPrice = promoPrice
+        self.expirationDate = expirationDate #pylint: disable=invalid-name
+        self.inPromo = inPromo #pylint: disable=invalid-name
+        self.promoPrice = promoPrice #pylint: disable=invalid-name
 
 class ProductSchema(Schema):
     """
     Class representing a Product's tag.
     """
     class Meta:
+        #pylint: disable=missing-class-docstring,too-few-public-methods
         unknown = EXCLUDE
 
     code = fields.Str()
@@ -31,4 +43,5 @@ class ProductSchema(Schema):
 
     @post_load
     def make_user(self, data, **kwargs):
+        #pylint: disable=missing-function-docstring,unused-argument,no-self-use
         return Product(**data)
