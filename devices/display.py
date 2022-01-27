@@ -74,8 +74,8 @@ class Display:
         await self.__setup_productview_frame()
         await self.__write_text((2, 1), product.name)
         await self.__write_text((5, 16), f"{price} \u20ac", font=font_18)
-        await self.__write_text((5, 34), f"Art.: {product.product_id}")
-        await self.__write_text((5, 47), f"Scad.: {product.expiration_date}")
+        await self.__write_text((5, 34), f"Art.: {product.code}")
+        await self.__write_text((5, 47), f"Scad.: {product.expirationDate}")
         await self.__show_screen()
 
     async def __show_screen(self):
