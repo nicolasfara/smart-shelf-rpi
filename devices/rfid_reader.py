@@ -11,7 +11,7 @@ import board
 from adafruit_pn532.adafruit_pn532 import MIFARE_CMD_AUTH_B
 from adafruit_pn532.i2c import PN532_I2C
 
-from models.product import Product
+from models.product import ProductTag
 
 
 class RfidReader:
@@ -51,11 +51,9 @@ class RfidReader:
                 if read is not None:
                     self.__logger.debug("Byte read: %s", [hex(x) for x in read])
                     self.__logger.info("message read: %s", read.decode())
-                    product = Product(
-                        code="12345",
-                        lot=1647384,
-                        name=read.decode().split('\x00', 1)[0],
-                        price=2.45, expirationDate="2022-02-26", promoPrice=None, inPromo=False
+                    product = ProductTag(
+                        code="ABC12345",
+                        lot=250122,
                     )
                     self._publisher.publish(self._publish_key, product)
 
