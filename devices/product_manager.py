@@ -36,7 +36,9 @@ class ProductShelfSchema(Schema):
 class ProductManager:
     #pylint: disable=too-many-instance-attributes
     """
-    TODO.
+    This class manage all the products that are insert and removed from the shelf.
+    On each scan check if a product is already in the sehelf or not and act consequently.
+    Also, mange a product update info from the warehouse.
     """
     def __init__(self, loop: asyncio.AbstractEventLoop, message_bus: aiopubsub.Hub):
         self.__loop = loop
@@ -63,7 +65,7 @@ class ProductManager:
         self.__logger = logging.getLogger("product_manager")
 
     async def start(self) -> None:
-        """TODO"""
+        """Start the taks."""
         await self.__load_products_file()
         self.__subscriber.add_async_listener(self.__subscribe_new_tag_key, self.__on_new_tag)
         self.__subscriber.add_async_listener(self.__subscribe_update_key, self.__on_product_update)
@@ -120,7 +122,7 @@ class ProductManager:
             )
 
             if not product_in_list:
-                self.__logger.debug("The product not exist, insert in the shelf")
+                self.__logger.debug("The product doesn't exist, insert in the shelf")
                 self.__products.products.append(readed_product)
             else:
                 self.__logger.debug("The product is in the shelf, remove it from shelf")
