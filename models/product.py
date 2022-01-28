@@ -5,7 +5,7 @@ from marshmallow import Schema, fields, post_load, EXCLUDE
 
 class Product:
     #pylint: disable=too-few-public-methods
-    """TODO"""
+    """Model of a product with it's info"""
     def __init__(
         #pylint: disable=too-many-arguments
         self,

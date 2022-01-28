@@ -16,7 +16,7 @@ from models.product import ProductTag
 
 class RfidReader:
     """
-    Todo.
+    Mange all the tag reading.
     """
     def __init__(self, loop: asyncio.AbstractEventLoop, message_bus: aiopubsub.Hub, debug = False):
         """

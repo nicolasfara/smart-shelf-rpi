@@ -1,5 +1,5 @@
 """
-TODO.
+Manage the sehlf's display
 """
 import asyncio
 import logging
@@ -17,7 +17,7 @@ font_18 = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 
 
 class Display:
     """
-    TODO.
+    Manage all the info in the display.
     """
     def __init__(self, loop: asyncio.AbstractEventLoop, message_bus: aiopubsub.Hub) -> None:
         self.__oled = adafruit_ssd1306.SSD1306_I2C(128, 64, board.I2C(), addr=0x3c)
@@ -37,7 +37,7 @@ class Display:
 
     async def start_display(self) -> None:
         """
-        TODO.
+        Start the service for managing the display.
         """
         await self.__splash_screen()
         await asyncio.sleep(2)

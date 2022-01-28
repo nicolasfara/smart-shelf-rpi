@@ -60,7 +60,7 @@ class AwsDevice:
 
     async def start(self):
         """
-        TODO.
+        Start the serivce and connect to AWS.
         """
         self.__logger.debug("Connecting to %s with client id %s", self.__endpoint, self.__client_id)
         await asyncio.wrap_future(self.__mqtt_connection.connect())
@@ -78,7 +78,7 @@ class AwsDevice:
 
     async def stop(self):
         """
-        TODO.
+        Stop the service and disconnect from AWS.
         """
         await asyncio.wrap_future(self.__mqtt_connection.disconnect())
         self.__logger.info("Disconnect from %s", self.__endpoint)
