@@ -19,7 +19,12 @@ class Display:
     """
     Manage all the info in the display.
     """
-    def __init__(self, loop: asyncio.AbstractEventLoop, message_bus: aiopubsub.Hub) -> None:
+    def __init__(
+        self,
+        loop: asyncio.AbstractEventLoop,
+        message_bus: aiopubsub.Hub,
+        startup_event: asyncio.Event
+    ) -> None:
         self.__oled = adafruit_ssd1306.SSD1306_I2C(128, 64, board.I2C(), addr=0x3c)
 
         self.__image = Image.new("1", (self.__oled.width, self.__oled.height))
@@ -33,6 +38,8 @@ class Display:
         self.__subscriber = aiopubsub.Subscriber(self.__message_bus, "display")
         self.__subscribe_key = aiopubsub.Key("*", "productmanager", "*")
 
+        self.__startup_event = startup_event
+
         logging.debug("Display instance created")
 
     async def start_display(self) -> None:
@@ -40,13 +47,14 @@ class Display:
         Start the service for managing the display.
         """
         await self.__splash_screen()
-        await asyncio.sleep(2)
 
         await self.__clean_screen()
 
         logging.info("Display setup complete")
 
         self.__subscriber.add_async_listener(self.__subscribe_key, self.__on_new_tag)
+
+        self.__startup_event.set()
 
     # Private methods
 

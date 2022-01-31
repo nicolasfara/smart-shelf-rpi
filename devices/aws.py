@@ -29,7 +29,7 @@ class AwsDevice:
         cert: str,
         key: str,
         client_id: str,
-        message_bus: aiopubsub.Hub
+        message_bus: aiopubsub.Hub,
     ) -> None:
         self.__endpoint = endpoint
         self.__client_id = client_id
