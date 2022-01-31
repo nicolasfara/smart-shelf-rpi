@@ -44,7 +44,7 @@ if __name__ == "__main__":
 
     display = Display(loop=loop, message_bus=message_bus)
     rfid_reader = RfidReader(loop=loop, message_bus=message_bus)
-    product_manager = ProductManager(loop=loop, message_bus=message_bus)
+    product_manager = ProductManager(loop=loop, message_bus=message_bus, shelf_id=1)
     if not args.dryrun:
         aws_device = AwsDevice(
             endpoint=aws_endpoint,
