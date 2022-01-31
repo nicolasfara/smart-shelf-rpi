@@ -2,8 +2,10 @@
 Manage products in the shelf: insert and remove.
 """
 import asyncio
+import json
 import logging
 import os
+import uuid
 from pathlib import Path
 from typing import List
 
@@ -12,11 +14,9 @@ import aiopubsub
 import boto3
 from boto3.dynamodb.conditions import Attr
 from botocore.exceptions import ClientError
-from models.product import Product, ProductTag
 from pydantic import BaseModel, ValidationError
-from typing import List
-import json
-import uuid
+from models.product import Product, ProductTag
+
 
 
 class ProductShelf(BaseModel):
@@ -76,8 +76,10 @@ class ProductManager:
         self.__logger.debug("Product list: %s", self.__products.products)
 
     async def __on_product_update(self, key, product: Product):
-        self.__logger.debug("Receive product update: %s", product)
-        product_in_shelf = list(filter(lambda p: p.code == product.code and p.lot == product.lot, self.__products.products))
+        self.__logger.debug("Receive product update: %s from key: %s", product, key)
+        product_in_shelf = list(
+            filter(lambda p: p.code == product.code and p.lot == product.lot, self.__products.products)
+        )
         if not product_in_shelf:
             self.__logger.debug("The product is not in the shelf, skip operation")
         else:
@@ -134,11 +136,11 @@ class ProductManager:
             except ClientError as error:
                 self.__logger.error(error)
                 return []
-        def update_quantity(id: str, quantity: int):
+        def update_quantity(tag_id: str, quantity: int):
             try:
                 response = self.__product_shelf_table.update_item(
                     Key={
-                        'id': id
+                        'id': tag_id
                     },
                     UpdateExpression="set quantity=:q",
                     ExpressionAttributeValues={
@@ -149,7 +151,7 @@ class ProductManager:
             except ClientError as error:
                 self.__logger.error(error)
                 return []
-        
+
         result = await self.__loop.run_in_executor(None, query_shelf)
         if not result:
             self.__logger.debug("No product is in this shelf, create new record")
@@ -179,11 +181,11 @@ class ProductManager:
                 self.__logger.error(error)
                 return []
 
-        def update_quantity(id: str, quantity: int):
+        def update_quantity(tag_id: str, quantity: int):
             try:
                 response = self.__product_shelf_table.update_item(
                     Key={
-                        'id': id
+                        'id': tag_id
                     },
                     UpdateExpression="set quantity=:q",
                     ExpressionAttributeValues={
@@ -194,11 +196,11 @@ class ProductManager:
             except ClientError as error:
                 self.__logger.error(error)
                 return []
-        
-        def delete_item(id: str):
+
+        def delete_item(tag_id: str):
             try:
                 response = self.__product_shelf_table.delete_item(
-                    Key={'id': id},
+                    Key={'id': tag_id},
                 )
                 return response
             except ClientError as error:
