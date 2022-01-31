@@ -52,6 +52,7 @@ class RfidReader:
                     self.__logger.debug("Byte read: %s", [hex(x) for x in read])
                     self.__logger.info("message read: %s", read.decode())
                     product = ProductTag(
+                        id="1dfef00c-760d-4d3e-bff7-d002a550aee4",
                         code="ABC12345",
                         lot=250122,
                     )

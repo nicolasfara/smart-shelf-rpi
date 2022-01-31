@@ -12,38 +12,28 @@ import aiopubsub
 import boto3
 from boto3.dynamodb.conditions import Attr
 from botocore.exceptions import ClientError
-from marshmallow import Schema, fields, post_load
-from marshmallow.exceptions import ValidationError
-from models.product import Product, ProductSchema, ProductTag
+from models.product import Product, ProductTag
+from pydantic import BaseModel, ValidationError
+from typing import List
+import json
+import uuid
 
 
-class ProductShelf:
+class ProductShelf(BaseModel):
     #pylint: disable=too-few-public-methods
     """TODO"""
-    def __init__(self, products: List[Product]):
-        self.products = products
-
-class ProductShelfSchema(Schema):
-    """TODO"""
-    products = fields.List(fields.Nested(ProductSchema))
-
-    @post_load
-    def make_user(self, data, **kwargs):
-        #pylint: disable=missing-function-docstring,unused-argument,no-self-use
-        return ProductShelf(**data)
+    products: List[Product] = []
 
 
 class ProductManager:
     #pylint: disable=too-many-instance-attributes
     """
-    This class manage all the products that are insert and removed from the shelf.
-    On each scan check if a product is already in the sehelf or not and act consequently.
-    Also, mange a product update info from the warehouse.
+    TODO.
     """
-    def __init__(self, loop: asyncio.AbstractEventLoop, message_bus: aiopubsub.Hub):
+    def __init__(self, loop: asyncio.AbstractEventLoop, message_bus: aiopubsub.Hub, shelf_id: int):
         self.__loop = loop
         self.__message_bus = message_bus
-
+        self.__shelf_id = shelf_id
         self.__save_path = Path.home() / ".products.json"
         self.__save_path.touch(exist_ok=True)
         self.__products = ProductShelf(products=[])
@@ -55,6 +45,7 @@ class ProductManager:
             aws_secret_access_key=os.environ["AWS_BACKEND_SECRET"]
         )
         self.__table = self.__db.Table("Product-n5ua2pmmmrcibp6oynfn73yccq-sc")
+        self.__product_shelf_table = self.__db.Table("ProductShelf-n5ua2pmmmrcibp6oynfn73yccq-sc")
 
         self.__subscriber = aiopubsub.Subscriber(self.__message_bus, "ProductManager")
         self.__subscribe_new_tag_key = aiopubsub.Key("*", "tag", "*")
@@ -65,7 +56,7 @@ class ProductManager:
         self.__logger = logging.getLogger("product_manager")
 
     async def start(self) -> None:
-        """Start the taks."""
+        """TODO"""
         await self.__load_products_file()
         self.__subscriber.add_async_listener(self.__subscribe_new_tag_key, self.__on_new_tag)
         self.__subscriber.add_async_listener(self.__subscribe_update_key, self.__on_product_update)
@@ -77,13 +68,8 @@ class ProductManager:
         self.__logger.debug("Product list: %s", self.__products.products)
 
     async def __on_product_update(self, key, product: Product):
-        self.__logger.debug("Receive product update: %s from key %s", product, key)
-        product_in_shelf = list(
-            filter(
-                lambda p: p.code == product.code and p.lot == product.lot,
-                self.__products.products
-            )
-        )
+        self.__logger.debug("Receive product update: %s", product)
+        product_in_shelf = list(filter(lambda p: p.code == product.code and p.lot == product.lot, self.__products.products))
         if not product_in_shelf:
             self.__logger.debug("The product is not in the shelf, skip operation")
         else:
@@ -91,7 +77,7 @@ class ProductManager:
             index = self.__products.products.index(product_in_shelf[0])
             self.__products.products.pop(index) # remove the old product info
             self.__products.products.insert(index, product) # update info
-            await self.__write_products_file(ProductShelfSchema().dumps(self.__products))
+            await self.__write_products_file(self.__products.json())
             if index == 0:
                 await self.__send_product_to_display()
 
@@ -112,36 +98,130 @@ class ProductManager:
             self.__logger.warning("No product with code %s and lot %s was found", product.code, product.lot)
         else:
             # The product exist in the DB
-            readed_product = ProductSchema().load(result[0])
-            self.__logger.debug("Now products %s", self.__products.products)
-            product_in_list = list(
-                filter(
-                    lambda p: p.code == readed_product.code and p.lot == readed_product.lot,
-                    self.__products.products
-                )
-            )
+            readed_product = Product(**result[0], tag_id=product.id)
+            self.__logger.debug("Now products %s, key: %s", self.__products.products, product.id)
+            product_in_list = list(filter(lambda p: p.tag_id == product.id, self.__products.products))
+            self.__logger.debug("After filter %s", product_in_list)
 
             if not product_in_list:
-                self.__logger.debug("The product doesn't exist, insert in the shelf")
+                self.__logger.debug("The product not exist, insert in the shelf")
                 self.__products.products.append(readed_product)
+                await self.__insert_product_in_shelf_db(readed_product)
             else:
                 self.__logger.debug("The product is in the shelf, remove it from shelf")
                 index = self.__products.products.index(product_in_list[0])
                 self.__products.products.pop(index)
+                await self.__remove_product_in_shelf_db(product_in_list[0])
 
-            await self.__write_products_file(ProductShelfSchema().dumps(self.__products))
+            await self.__write_products_file(self.__products.json())
             await self.__send_product_to_display()
 
-    async def __load_products_file(self) -> None:
+    async def __insert_product_in_shelf_db(self, product: Product):
+        def query_shelf():
+            try:
+                product_in_shelf = self.__product_shelf_table.scan(
+                    FilterExpression=Attr("shelfId").eq(self.__shelf_id) & Attr("productShelfProductId").eq(product.id)
+                )
+                return product_in_shelf.get("Items", [])
+            except ClientError as error:
+                self.__logger.error(error)
+                return []
+        def update_quantity(id: str, quantity: int):
+            try:
+                response = self.__product_shelf_table.update_item(
+                    Key={
+                        'id': id
+                    },
+                    UpdateExpression="set quantity=:q",
+                    ExpressionAttributeValues={
+                        ':q': quantity
+                    }
+                )
+                return response
+            except ClientError as error:
+                self.__logger.error(error)
+                return []
+        
+        result = await self.__loop.run_in_executor(None, query_shelf)
+        if not result:
+            self.__logger.debug("No product is in this shelf, create new record")
+            response = self.__product_shelf_table.put_item(
+                Item={
+                    'id': str(uuid.uuid4()),
+                    'shelfId': self.__shelf_id,
+                    'productShelfProductId': product.id,
+                    'quantity': 1
+                }
+            )
+            self.__logger.debug("Insert product shelf result: %s", response)
+        else:
+            self.__logger.debug("Other products are in the shelf, increare quantity")
+            quantity = result[0].get("quantity")
+            response = await self.__loop.run_in_executor(None, update_quantity, result[0].get("id"), quantity+1)
+            self.__logger.debug("Update quantity result: %s", response)
+
+    async def __remove_product_in_shelf_db(self, product: Product):
+        def query_shelf():
+            try:
+                product_in_shelf = self.__product_shelf_table.scan(
+                    FilterExpression=Attr("shelfId").eq(self.__shelf_id) & Attr("productShelfProductId").eq(product.id)
+                )
+                return product_in_shelf.get("Items", [])
+            except ClientError as error:
+                self.__logger.error(error)
+                return []
+
+        def update_quantity(id: str, quantity: int):
+            try:
+                response = self.__product_shelf_table.update_item(
+                    Key={
+                        'id': id
+                    },
+                    UpdateExpression="set quantity=:q",
+                    ExpressionAttributeValues={
+                        ':q': quantity
+                    }
+                )
+                return response
+            except ClientError as error:
+                self.__logger.error(error)
+                return []
+        
+        def delete_item(id: str):
+            try:
+                response = self.__product_shelf_table.delete_item(
+                    Key={'id': id},
+                )
+                return response
+            except ClientError as error:
+                self.__logger.error(error)
+                return []
+
+        result = await self.__loop.run_in_executor(None, query_shelf)
+        if not result:
+            self.__logger.debug("No product is in this shelf, create new record")
+        else:
+            self.__logger.debug("Other products are in the shelf, decrease quantity")
+            quantity = result[0].get("quantity")
+            if quantity == 1: # since we have only 1 item to remove, delete the record in DB
+                self.__logger.debug("The product quantity of the product is 0, delete record")
+                await self.__loop.run_in_executor(None, delete_item, result[0].get("id"))
+            else:
+                response = await self.__loop.run_in_executor(None, update_quantity, result[0].get("id"), quantity-1)
+                self.__logger.debug("Update quantity result: %s", response)
+
+    async def __load_products_file(self):
+        content = None
         async with aiofile.async_open(self.__save_path, 'r') as file:
             content = await file.read()
-            try:
-                self.__products = ProductShelfSchema().loads(content)
-                self.__logger.debug("Load from file: %s", self.__products)
-            except ValidationError as error:
-                self.__logger.error(error)
-                self.__logger.debug("Failed to load products")
-                self.__logger.debug("Fall back to %s", self.__products.products)
+        try:
+            obj = json.loads(content)
+            self.__products = ProductShelf(**obj)
+            self.__logger.debug("Load from file: %s", self.__products)
+        except (json.JSONDecodeError, ValidationError) as error:
+            self.__logger.error(error)
+            self.__logger.debug("Failed to load products")
+            self.__logger.debug("Fall back to %s", self.__products.products)
 
     async def __write_products_file(self, payload) -> None:
         async with aiofile.async_open(self.__save_path, 'w') as file:
