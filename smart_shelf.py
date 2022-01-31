@@ -42,9 +42,11 @@ if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     message_bus = aiopubsub.Hub()
 
-    display = Display(loop=loop, message_bus=message_bus)
+    startup_event = asyncio.Event()
+
+    display = Display(loop=loop, message_bus=message_bus, startup_event=startup_event)
     rfid_reader = RfidReader(loop=loop, message_bus=message_bus)
-    product_manager = ProductManager(loop=loop, message_bus=message_bus, shelf_id=1)
+    product_manager = ProductManager(loop=loop, message_bus=message_bus, shelf_id=1, startup_event=startup_event)
     if not args.dryrun:
         aws_device = AwsDevice(
             endpoint=aws_endpoint,
@@ -52,7 +54,7 @@ if __name__ == "__main__":
             cert=aws_cert,
             key=aws_key,
             client_id=client_id,
-            message_bus=message_bus
+            message_bus=message_bus,
         )
 
     async def __on_quit():

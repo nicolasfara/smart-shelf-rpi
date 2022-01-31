@@ -30,8 +30,15 @@ class ProductManager:
     """
     TODO.
     """
-    def __init__(self, loop: asyncio.AbstractEventLoop, message_bus: aiopubsub.Hub, shelf_id: int):
+    def __init__(
+        self,
+        loop: asyncio.AbstractEventLoop,
+        message_bus: aiopubsub.Hub,
+        shelf_id: int,
+        startup_event: asyncio.Event
+    ):
         self.__loop = loop
+        self.__startup_event = startup_event
         self.__message_bus = message_bus
         self.__shelf_id = shelf_id
         self.__save_path = Path.home() / ".products.json"
@@ -60,6 +67,7 @@ class ProductManager:
         await self.__load_products_file()
         self.__subscriber.add_async_listener(self.__subscribe_new_tag_key, self.__on_new_tag)
         self.__subscriber.add_async_listener(self.__subscribe_update_key, self.__on_product_update)
+        await self.__startup_event.wait()
         await self.__send_product_to_display()
 
     async def __on_new_tag(self, key, product: ProductTag):
@@ -229,7 +237,7 @@ class ProductManager:
 
     async def __send_product_to_display(self):
         if len(self.__products.products) > 0:
-            product_display = self.__products.products[0]
+            product_display = self.__products.products[-1]
         else:
             product_display = None
 
