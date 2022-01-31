@@ -9,13 +9,14 @@ import adafruit_ssd1306
 import aiopubsub
 import board
 from PIL import Image, ImageDraw, ImageFont
-
 from models.product import Product
+
 
 font_12 = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 12)
 font_18 = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 18)
 
 class Display:
+    #pylint: disable=too-many-instance-attributes
     """
     Manage all the info in the display.
     """
