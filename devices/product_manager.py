@@ -2,6 +2,7 @@
 Manage products in the shelf: insert and remove.
 """
 import asyncio
+import datetime
 import json
 import logging
 import os
@@ -21,14 +22,16 @@ from models.product import Product, ProductTag
 
 class ProductShelf(BaseModel):
     #pylint: disable=too-few-public-methods
-    """TODO"""
+    """Model for products in the shelf"""
     products: List[Product] = []
 
 
 class ProductManager:
     #pylint: disable=too-many-instance-attributes
     """
-    TODO.
+    This class manage all the products that are insert and removed from the shelf.
+    On each scan check if a product is already in the sehelf or not and act consequently.
+    Also, mange a product update info from the warehouse.
     """
     def __init__(
         self,
@@ -160,7 +163,9 @@ class ProductManager:
                     'id': str(uuid.uuid4()),
                     'shelfId': self.__shelf_id,
                     'productShelfProductId': product.id,
-                    'quantity': 1
+                    'quantity': 1,
+                    'createdAt': datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ'),
+                    'updatedAt': datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ'),
                 }
             )
             self.__logger.debug("Insert product shelf result: %s", response)
@@ -187,9 +192,10 @@ class ProductManager:
                     Key={
                         'id': tag_id
                     },
-                    UpdateExpression="set quantity=:q",
+                    UpdateExpression="set quantity=:q, updatetedAt=:u",
                     ExpressionAttributeValues={
-                        ':q': quantity
+                        ':q': quantity,
+                        ':u': datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ'),
                     }
                 )
                 return response
