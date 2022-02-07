@@ -87,7 +87,7 @@ class AwsDevice:
 
     def __on_product_update(self, topic, payload, dup, qos, retain, **kwargs):
         #pylint: disable=unused-argument
-        self.__logger.debug("New product update: %s", payload)
+        self.__logger.debug("New product update: %s", json.loads(payload))
         product_updated = Product(**json.loads(payload))
         self.__logger.debug("De-seriaslized object: %s", product_updated)
         self.__publisher.publish(self.__publish_key, product_updated)
