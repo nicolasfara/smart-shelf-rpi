@@ -57,12 +57,12 @@ class RfidReader:
                     self.__logger.debug("Code bytes: %s", [hex(x) for x in code])
                     self.__logger.debug("Lot bytes: %s", [hex(x) for x in lot])
 
-                    # product = ProductTag(
-                    #     id=uid.hex(),
-                    #     code=code.decode(),
-                    #     lot=int(lot.decode()),
-                    # )
-                    # self._publisher.publish(self._publish_key, product)
+                    product = ProductTag(
+                        id=uid.hex(),
+                        code=code.decode(),
+                        lot=int(lot.decode()),
+                    )
+                    self._publisher.publish(self._publish_key, product)
 
                     await asyncio.sleep(0.5)
 
