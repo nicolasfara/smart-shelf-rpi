@@ -10,7 +10,7 @@ class Product(BaseModel):
     #pylint: disable=too-few-public-methods
     """Model of a product with it's info"""
     id: str
-    tag_id: str
+    tag_id: Optional[str]
     code: str
     lot: int
     name: str

@@ -45,18 +45,24 @@ class RfidReader:
         while True:
             uid = await self._loop.run_in_executor(None, self._pn532.read_passive_target)
             if uid is not None:
-                self.__logger.debug("New card found: %s", [hex(x) for x in uid])
+                self.__logger.debug("New card found: %s", uid.hex())
 
-                read = await self.__read_sector(uid, 1)
-                if read is not None:
-                    self.__logger.debug("Byte read: %s", [hex(x) for x in read])
-                    self.__logger.info("message read: %s", read.decode())
-                    product = ProductTag(
-                        id="1dfef00c-760d-4d3e-bff7-d002a550aee4",
-                        code="ABC12345",
-                        lot=250122,
-                    )
-                    self._publisher.publish(self._publish_key, product)
+                code = await self.__read_sector(uid, 1)
+                lot = await self.__read_sector(uid, 2)
+
+                if code is not None and lot is not None:
+                    self.__logger.info("Read 'code' and 'lot' successfully")
+                    self.__logger.info("Code: %s", code.decode())
+                    self.__logger.info("Lot: %s", lot.decode())
+                    self.__logger.debug("Code bytes: %s", [hex(x) for x in code])
+                    self.__logger.debug("Lot bytes: %s", [hex(x) for x in lot])
+
+                    # product = ProductTag(
+                    #     id=uid.hex(),
+                    #     code=code.decode(),
+                    #     lot=int(lot.decode()),
+                    # )
+                    # self._publisher.publish(self._publish_key, product)
 
                     await asyncio.sleep(0.5)
 
