@@ -59,8 +59,8 @@ class RfidReader:
 
                     product = ProductTag(
                         id=uid.hex(),
-                        code=code.decode(),
-                        lot=int(lot.decode()),
+                        code=code.decode().split('\x00',1)[0],
+                        lot=int(lot.decode().split('\x00',1)[0]),
                     )
                     self._publisher.publish(self._publish_key, product)
 

@@ -54,8 +54,8 @@ class ProductManager:
             aws_access_key_id=os.environ["AWS_BACKEND_KEY"],
             aws_secret_access_key=os.environ["AWS_BACKEND_SECRET"]
         )
-        self.__table = self.__db.Table("Product-n5ua2pmmmrcibp6oynfn73yccq-sc")
-        self.__product_shelf_table = self.__db.Table("ProductShelf-n5ua2pmmmrcibp6oynfn73yccq-sc")
+        self.__table = self.__db.Table("Product-fc2nic6eurbjbnjcsvser6faz4-sc")
+        self.__product_shelf_table = self.__db.Table("ProductShelf-fc2nic6eurbjbnjcsvser6faz4-sc")
 
         self.__subscriber = aiopubsub.Subscriber(self.__message_bus, "ProductManager")
         self.__subscribe_new_tag_key = aiopubsub.Key("*", "tag", "*")
@@ -97,6 +97,7 @@ class ProductManager:
     async def __insert_remove_product_logic(self, product: ProductTag) -> None:
         def callback():
             try:
+                self.__logger.debug("Query with code: %s and lot %s", product.code, product.lot)
                 products_result = self.__table.scan(
                     FilterExpression=Attr("code").eq(product.code) & Attr("lot").eq(product.lot)
                 )
