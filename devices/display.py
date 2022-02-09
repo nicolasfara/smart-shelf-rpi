@@ -41,7 +41,9 @@ class Display:
 
         self.__startup_event = startup_event
 
-        logging.debug("Display instance created")
+        self.__logger = logging.getLogger("display")
+
+        self.__logger.debug("Display instance created")
 
     async def start_display(self) -> None:
         """
@@ -51,7 +53,7 @@ class Display:
 
         await self.__clean_screen()
 
-        logging.info("Display setup complete")
+        self.__logger.info("Display setup complete")
 
         self.__subscriber.add_async_listener(self.__subscribe_key, self.__on_new_tag)
 
@@ -68,7 +70,7 @@ class Display:
         await self.__loop.run_in_executor(None, setup_ui_frame)
 
     async def __on_new_tag(self, key, product: Product) -> None:
-        logging.debug("New message with key: %s", key)
+        self.__logger.debug("New message with key: %s", key)
         await self.__configure_product_view(product)
 
     async def __splash_screen(self) -> None:
@@ -78,6 +80,7 @@ class Display:
         await self.__show_screen()
 
     async def __configure_product_view(self, product: Product) -> None:
+        self.__logger.debug("Write display for product update")
         if product is None:
             await self.__clean_screen()
             await self.__setup_productview_frame()
