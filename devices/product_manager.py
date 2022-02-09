@@ -91,7 +91,7 @@ class ProductManager:
             self.__products.products.pop(index) # remove the old product info
             self.__products.products.insert(index, product) # update info
             await self.__write_products_file(self.__products.json())
-            if index == 0:
+            if index == len(self.__products.products)-1:
                 await self.__send_product_to_display()
 
     async def __insert_remove_product_logic(self, product: ProductTag) -> None:
