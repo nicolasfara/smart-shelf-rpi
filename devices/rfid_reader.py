@@ -41,30 +41,32 @@ class RfidReader:
         Start reading tags.
         """
         logging.debug("Start reading new tags")
+        try:
+            while True:
+                uid = await self._loop.run_in_executor(None, self._pn532.read_passive_target)
+                if uid is not None:
+                    self.__logger.debug("New card found: %s", uid.hex())
 
-        while True:
-            uid = await self._loop.run_in_executor(None, self._pn532.read_passive_target)
-            if uid is not None:
-                self.__logger.debug("New card found: %s", uid.hex())
+                    code = await self.__read_sector(uid, 1)
+                    lot = await self.__read_sector(uid, 2)
 
-                code = await self.__read_sector(uid, 1)
-                lot = await self.__read_sector(uid, 2)
+                    if code is not None and lot is not None:
+                        self.__logger.info("Read 'code' and 'lot' successfully")
+                        self.__logger.info("Code: %s", code.decode())
+                        self.__logger.info("Lot: %s", lot.decode())
+                        self.__logger.debug("Code bytes: %s", [hex(x) for x in code])
+                        self.__logger.debug("Lot bytes: %s", [hex(x) for x in lot])
 
-                if code is not None and lot is not None:
-                    self.__logger.info("Read 'code' and 'lot' successfully")
-                    self.__logger.info("Code: %s", code.decode())
-                    self.__logger.info("Lot: %s", lot.decode())
-                    self.__logger.debug("Code bytes: %s", [hex(x) for x in code])
-                    self.__logger.debug("Lot bytes: %s", [hex(x) for x in lot])
+                        product = ProductTag(
+                            id=uid.hex(),
+                            code=code.decode().split('\x00',1)[0],
+                            lot=int(lot.decode().split('\x00',1)[0]),
+                        )
+                        self._publisher.publish(self._publish_key, product)
 
-                    product = ProductTag(
-                        id=uid.hex(),
-                        code=code.decode().split('\x00',1)[0],
-                        lot=int(lot.decode().split('\x00',1)[0]),
-                    )
-                    self._publisher.publish(self._publish_key, product)
-
-                    await asyncio.sleep(0.5)
+                        await asyncio.sleep(0.5)
+        except Exception as exception:
+            self.__logger.error(exception)
 
     async def __read_block(self, uid, block: int) -> Union[bytearray, None]:
         """

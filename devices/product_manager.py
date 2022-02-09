@@ -79,20 +79,26 @@ class ProductManager:
         self.__logger.debug("Product list: %s", self.__products.products)
 
     async def __on_product_update(self, key, product: Product):
-        self.__logger.debug("Receive product update: %s from key: %s", product, key)
-        product_in_shelf = list(
-            filter(lambda p: p.code == product.code and p.lot == product.lot, self.__products.products)
-        )
-        if not product_in_shelf:
-            self.__logger.debug("The product is not in the shelf, skip operation")
-        else:
-            self.__logger.debug("Product found in the shelf! Updating info")
-            index = self.__products.products.index(product_in_shelf[0])
-            self.__products.products.pop(index) # remove the old product info
-            self.__products.products.insert(index, product) # update info
-            await self.__write_products_file(self.__products.json())
-            if index == len(self.__products.products)-1:
-                await self.__send_product_to_display()
+        try:
+            self.__logger.debug("Receive product update: %s from key: %s", product, key)
+            product_in_shelf = list(
+                filter(lambda p: p.code == product.code and p.lot == product.lot, self.__products.products)
+            )
+            if not product_in_shelf:
+                self.__logger.debug("The product is not in the shelf, skip operation")
+            else:
+                self.__logger.debug("Product found in the shelf! Updating info")
+                index = self.__products.products.index(product_in_shelf[0])
+                removed_prod = self.__products.products.pop(index) # remove the old product info
+                updated_prod = product
+                updated_prod.tag_id = removed_prod.tag_id
+                self.__products.products.insert(index, updated_prod) # update info
+                await self.__write_products_file(self.__products.json())
+
+                if index == self.__products.products.index(self.__products.products[-1]):
+                    await self.__send_product_to_display()
+        except Exception as error:
+            self.__logger.error(error)
 
     async def __insert_remove_product_logic(self, product: ProductTag) -> None:
         def callback():
