@@ -60,6 +60,8 @@ class ProductManager:
         self.__subscriber = aiopubsub.Subscriber(self.__message_bus, "ProductManager")
         self.__subscribe_new_tag_key = aiopubsub.Key("*", "tag", "*")
         self.__subscribe_update_key = aiopubsub.Key("*", "update", "*")
+        self.__insert_product_key = aiopubsub.Key("product", "insert")
+        self.__remove_product_key = aiopubsub.Key("product", "remove")
         self.__publisher = aiopubsub.Publisher(self.__message_bus, prefix = aiopubsub.Key("productmanager"))
         self.__publish_key = aiopubsub.Key("productmanager", "product")
 
@@ -125,11 +127,13 @@ class ProductManager:
                 self.__logger.debug("The product not exist, insert in the shelf")
                 self.__products.products.append(readed_product)
                 await self.__insert_product_in_shelf_db(readed_product)
+                self.__publisher.publish(self.__insert_product_key, readed_product)
             else:
                 self.__logger.debug("The product is in the shelf, remove it from shelf")
                 index = self.__products.products.index(product_in_list[0])
                 self.__products.products.pop(index)
                 await self.__remove_product_in_shelf_db(product_in_list[0])
+                self.__publisher.publish(self.__remove_product_key, readed_product)
 
             await self.__write_products_file(self.__products.json())
             await self.__send_product_to_display()

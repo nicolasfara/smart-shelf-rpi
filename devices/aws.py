@@ -35,9 +35,10 @@ class AwsDevice:
         self.__client_id = client_id
         self.__message_bus = message_bus
         self.__subscriber = aiopubsub.Subscriber(self.__message_bus, "aws")
-        self.__subscribe_key = aiopubsub.Key("*", "tag", "*")
         self.__publisher = aiopubsub.Publisher(self.__message_bus, prefix = aiopubsub.Key("aws"))
         self.__publish_key = aiopubsub.Key("update", "product")
+        self.__product_insert_key = aiopubsub.Key("*", "product", "insert")
+        self.__product_remove_key = aiopubsub.Key("*", "product", "remove")
 
         self.__logger = logging.getLogger("aws")
 
@@ -66,15 +67,17 @@ class AwsDevice:
         await asyncio.wrap_future(self.__mqtt_connection.connect())
         self.__logger.debug("Connected to %s", self.__endpoint)
 
-        await asyncio.wrap_future(
-            self.__mqtt_connection.subscribe(
-                topic=UPDATE_PRODUCT_TOPIC,
-                qos=mqtt.QoS.AT_LEAST_ONCE,
-                callback=self.__on_product_update
-            )
+        future, packet_id = self.__mqtt_connection.subscribe(
+            topic=UPDATE_PRODUCT_TOPIC,
+            qos=mqtt.QoS.AT_LEAST_ONCE,
+            callback=self.__on_product_update
         )
+        await asyncio.wrap_future(future)
 
-        self.__subscriber.add_async_listener(self.__subscribe_key, self.__on_new_tag)
+        self.__subscriber.add_async_listener(self.__product_insert_key, self.__on_product_insert)
+        self.__subscriber.add_async_listener(self.__product_remove_key, self.__on_product_remove)
+
+        self.__logger.debug("Setup complete")
 
     async def stop(self):
         """
@@ -85,20 +88,28 @@ class AwsDevice:
 
     # Private methods
 
+    async def __on_product_insert(self, key, product: Product) -> None:
+        self.__logger.debug("Publish message for product insert")
+        self.__mqtt_connection.publish(
+            topic=INSERT_PRODUCT_TOPIC,
+            payload=product.json(),
+            qos=mqtt.QoS.AT_LEAST_ONCE
+        )
+
+    async def __on_product_remove(self, key, product: Product) -> None:
+        self.__logger.debug("Publish message for product remove")
+        self.__mqtt_connection.publish(
+            topic=REMOVE_PRODUCT_TOPIC,
+            payload=product.json(),
+            qos=mqtt.QoS.AT_LEAST_ONCE
+        )
+
     def __on_product_update(self, topic, payload, dup, qos, retain, **kwargs):
         #pylint: disable=unused-argument
         self.__logger.debug("New product update: %s", json.loads(payload))
         product_updated = Product(**json.loads(payload))
         self.__logger.debug("De-seriaslized object: %s", product_updated)
         self.__publisher.publish(self.__publish_key, product_updated)
-
-    async def __on_new_tag(self, key, product: Product) -> None:
-        self.__logger.debug("Got new message with key %s: %s", key, product)
-        self.__mqtt_connection.publish(
-            topic="test/topic",
-            payload=product.to_json(),
-            qos=mqtt.QoS.AT_LEAST_ONCE
-        )
 
     def __on_connection_interrupted(self, connection, error, **kwargs) -> None:
         #pylint: disable=unused-argument
