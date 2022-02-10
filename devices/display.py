@@ -87,10 +87,15 @@ class Display:
             await self.__write_text((2, 1), "No Products")
             await self.__show_screen()
         else:
-            price = format(product.price, ".2f")
+            
             await self.__clean_screen()
             await self.__setup_productview_frame()
             await self.__write_text((2, 1), product.name)
+            if product.inPromo:
+                price = format(product.promoPrice, ".2f")
+                await self.__write_text((67, 16), "PROM.", font=font_18)
+            else:
+                price = format(product.price, ".2f")
             await self.__write_text((5, 16), f"{price} \u20ac", font=font_18)
             await self.__write_text((5, 34), f"Art.: {product.code}")
             await self.__write_text((5, 47), f"Scad.: {product.expirationDate}")
